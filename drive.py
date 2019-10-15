@@ -11,10 +11,13 @@ import eventlet.wsgi
 from PIL import Image
 from flask import Flask
 from io import BytesIO
+from model import NvidiaNet
 
-from keras.models import load_model
-import h5py
-from keras import __version__ as keras_version
+import torch
+import cv2
+# from keras.models import load_model
+# import h5py
+# from keras import __version__ as keras_version
 
 sio = socketio.Server()
 app = Flask(__name__)
@@ -60,8 +63,12 @@ def telemetry(sid, data):
         # The current image from the center camera of the car
         imgString = data["image"]
         image = Image.open(BytesIO(base64.b64decode(imgString)))
-        image_array = np.asarray(image)
-        steering_angle = float(model.predict(image_array[None, :, :, :], batch_size=1))
+        image = np.asarray(image)
+        image = image[70:135, :]
+        # image = cv2.resize(image, (32, 32))
+        image = image / 255.0 - 0.5
+        image = torch.from_numpy(image.transpose(2,1,0)).float().unsqueeze(0).cuda()
+        steering_angle = model(image).item()
 
         throttle = controller.update(float(speed))
 
@@ -99,7 +106,7 @@ if __name__ == '__main__':
     parser.add_argument(
         'model',
         type=str,
-        help='Path to model h5 file. Model should be on the same path.'
+        help='Path to pytorch pkl file. Model should be on the same path.'
     )
     parser.add_argument(
         'image_folder',
@@ -111,15 +118,17 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # check that model Keras version is same as local Keras version
-    f = h5py.File(args.model, mode='r')
-    model_version = f.attrs.get('keras_version')
-    keras_version = str(keras_version).encode('utf8')
+    # f = h5py.File(args.model, mode='r')
+    # model_version = f.attrs.get('keras_version')
+    # keras_version = str(keras_version).encode('utf8')
 
-    if model_version != keras_version:
-        print('You are using Keras version ', keras_version,
-              ', but the model was built using ', model_version)
+    # if model_version != keras_version:
+    #     print('You are using Keras version ', keras_version,
+    #           ', but the model was built using ', model_version)
 
-    model = load_model(args.model)
+    # model = load_model(args.model)
+    model = torch.load('model.pkl')
+    model.eval()
 
     if args.image_folder != '':
         print("Creating image folder at {}".format(args.image_folder))
