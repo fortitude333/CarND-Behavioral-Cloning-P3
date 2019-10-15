@@ -1,150 +1,123 @@
+import torch
+from torch import nn, optim
+import torch.nn.functional as F
+from torch.utils.data import Dataset, DataLoader
 import csv
-import pickle
 import cv2
 import numpy as np
-import matplotlib.pyplot as plt
-from keras.models import Sequential, Model
-from keras.layers import Flatten, Dense, Lambda, Activation, Dropout, Cropping2D
-from keras.layers.convolutional import Conv2D
-from keras.layers.pooling import MaxPooling2D
-from sklearn.model_selection import train_test_split
-from sklearn.utils import shuffle
 
+class SdcSimDataset(Dataset):
+    def __init__(self, root_path):
+        self.root_path = root_path
+        self.lines = []
+        with open(root_path + 'driving_log.csv') as csvfile:
+            reader = csv.reader(csvfile)
+            for line in reader:
+                self.lines.append(line)
 
-def generator(samples, batch_size=100):
-	num_samples = len(samples)
-	# batch_size = int(batch_size / 4)
-	while 1:
-		for offset in range(0, num_samples, batch_size):
-			batch_samples = samples[offset:offset + batch_size]
+    def __len__(self):
+        return len(self.lines)
 
-			images = []
-			angles = []
-			for batch_sample in batch_samples:
-				angle = float(batch_sample[3])
-				correction = 0.2
+    def get_image(self, path, base_path='../data/'):
+        # load image and conver to RGB
+        filename = path.split('/')[-1]
+        path = base_path + 'IMG/' + filename
+        image = cv2.imread(path)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        return image
 
-				# CENTER
-				image = get_image(line[0])
-				images.append(image)
-				angles.append(angle)
+    def preprocess(self, image):
+        image = image[70:135, :]
+        # cv2.imshow("cropped", image)
+        # cv2.waitKey(0)
+        # image = cv2.resize(image, (32, 32))
+        image = image / 255.0 - 0.5
+        return image
 
-				# Augmenting images by flipping across y-axis
-				images.append(cv2.flip(image, 1))
-				angles.append(-angle)
+    def __getitem__(self, idx):
+        images = []
+        angles = []
+        line = self.lines[idx]
+        angle = float(line[3])
+        correction = 0.2
 
-				# LEFT
-				images.append(get_image(line[1]))
-				angles.append(angle + correction)
+        # CENTER
+        image = self.get_image(line[0], self.root_path)
+        image = self.preprocess(image)
+        images.append(image.transpose(2,0,1))
+        angles.append(angle)
 
-				# RIGHT
-				images.append(get_image(line[2]))
-				angles.append(angle - correction)
+        # Augmenting images by flipping across y-axis
+        images.append(cv2.flip(image, 1).transpose(2,0,1))
+        angles.append(-angle)
 
-			X_train = np.array(images)
-			y_train = np.array(angles)
-			yield shuffle(X_train, y_train)
+        # LEFT
+        image = self.get_image(line[1], self.root_path)
+        image = self.preprocess(image)
+        images.append(image.transpose(2,0,1))
+        angles.append(angle + correction)
 
-def read_data_from_file(data_path='data/'):
-	lines = []
-	with open(data_path + 'driving_log.csv') as csvfile:
-		reader = csv.reader(csvfile)
-		for line in reader:
-			lines.append(line)
+        # RIGHT
+        image = self.get_image(line[2], self.root_path)
+        image = self.preprocess(image)
+        images.append(image.transpose(2,0,1))
+        angles.append(angle - correction)
 
-	images = []
-	angles = []
-	for line in lines:
-		angle = float(line[3])
-		correction = 0.2
+        # X_train = torch.Tensor(np.stack(images))
+        # y_train = torch.Tensor(angles)
+        # breakpoint()
+        # sample = {'image': torch.from_numpy(np.stack(images)),
+        #         'angles': torch.from_numpy(np.stack(angles))}
+        sample = (images, angles)
 
-		# CENTER
-		image = get_image(line[0], data_path)
-		images.append(image)
-		angles.append(angle)
+        return sample
 
-		# Augmenting images by flipping across y-axis
-		images.append(cv2.flip(image, 1))
-		angles.append(-angle)
+# TODO
+# create the network
+class NvidiaNet(nn.Module):
+    def __init__(self):
+        super(NvidiaNet, self).__init__()
 
-		# LEFT
-		images.append(get_image(line[1], data_path))
-		angles.append(angle + correction)
+    def forward(self, x):
+        pass
 
-		# RIGHT
-		images.append(get_image(line[2], data_path))
-		angles.append(angle - correction)
-
-	X_train = np.array(images)
-	y_train = np.array(angles)
-
-	return (X_train, y_train)
-
-def store_in_pickle(data, filename='data.p'):
-	pickle.dump(data, open(filename, 'wb'))
-	print("Stored data in {}".format(filename))
-
-def get_image(path, base_path='../data/'):
-	# load image and conver to RGB
-	filename = path.split('/')[-1]
-	path = base_path + 'IMG/' + filename
-	image = cv2.imread(path)
-	image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-	return image
-
+def collate_fn(batch):
+    images = []
+    angles = []
+    for each in batch:
+        images.extend(each[0])
+        angles.extend(each[1])
+    return torch.from_numpy(np.stack(images)).float(), torch.from_numpy(np.stack(angles)).float().unsqueeze(-1)
 
 if __name__ == '__main__':
-	# lines = []
-	# with open('../data/driving_log.csv') as csvfile:
-	# 	reader = csv.reader(csvfile)
-	# 	for line in reader:
-	# 		lines.append(line)
+    torch.backends.cudnn.benchmark = True
+    # TODO
+    # change path according to your system
+    dataset = SdcSimDataset('/home/ridhwan/Downloads/beta_simulator_linux/recording_data/')
+    dataloader = DataLoader(dataset, batch_size=32, shuffle=True, num_workers=4, collate_fn=collate_fn)
+    net = NvidiaNet()
+    if torch.cuda.is_available():
+        net = net.cuda()
+    # TODO
+    # Create loss and optimizer
+    criterion =
+    optimizer =
+    for epoch in range(15):  # loop over the dataset multiple times
+        running_loss = 0.0
+        for i, (images, angles) in enumerate(dataloader):
+            if torch.cuda.is_available():
+                images = images.cuda()
+                angles = angles.cuda()
 
-	# train_samples, validation_samples = train_test_split(lines, test_size=0.2, random_state=51)
+            # TODO
+            # add code for forward pass, loss calc, back pass and optimizer step
 
-	# batch_size = 25
-	# train_generator = generator(train_samples, batch_size)
-	# validation_generator = generator(validation_samples, batch_size)
+            # print statistics
+            running_loss += loss.item()
+            print_every = 10
+            if i % print_every == print_every - 1:
+                print('[%d, %5d] loss: %.3f' %
+                      (epoch + 1, i + 1, running_loss / print_every))
+                running_loss = 0.0
 
-	# load data 
-	X_train, y_train = read_data_from_file('../data/')
-	
-	# Defining the model
-	model = Sequential()
-	model.add(Lambda(lambda x: x / 255.0 - 0.5 , input_shape=(160, 320, 3)))
-	model.add(Cropping2D(cropping=((70, 25), (0, 0))))
-	model.add(Conv2D(24, (5, 5), strides=2, activation='relu'))
-	model.add(Conv2D(36, (5, 5), strides=2, activation='relu'))
-	model.add(Conv2D(48, (5, 5), strides=2, activation='relu'))
-	model.add(Conv2D(64, (3, 3), activation='relu'))
-	model.add(Conv2D(64, (3, 3), activation='relu'))
-	model.add(Flatten())
-	model.add(Dense(1164))
-	model.add(Dropout(0.3))
-	model.add(Dense(100))
-	model.add(Dropout(0.3))
-	model.add(Dense(50))
-	model.add(Dense(10))
-	model.add(Dense(1))
-
-	model.compile(loss='mse', optimizer='adam')
-	history_object = model.fit(X_train, y_train, validation_split=0.2, shuffle=True, epochs=5, batch_size=100)
-	# history_object = model.fit_generator(train_generator,
-	# 									 steps_per_epoch=len(train_samples)/batch_size,
-	# 									 validation_data=validation_generator,
-	# 									 validation_steps=len(validation_samples)/batch_size,
-	# 									 epochs=5)
-
-	print(history_object.history.keys())
-
-	# Plot the training and validation loss for each epoch
-	plt.plot(history_object.history['loss'])
-	plt.plot(history_object.history['val_loss'])
-	plt.title('model mean squared error loss')
-	plt.ylabel('mean squared error loss')
-	plt.xlabel('epoch')
-	plt.legend(['training set', 'validation set'], loc='upper right')
-	plt.show()
-
-	# Save model for use by drive
-	model.save('model.h5')
+    torch.save(net, 'model.pkl')
