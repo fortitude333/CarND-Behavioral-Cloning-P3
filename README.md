@@ -1,7 +1,5 @@
 # Behaviorial Cloning Project
 
-[![Udacity - Self-Driving Car NanoDegree](https://s3.amazonaws.com/udacity-sdc/github/shield-carnd.svg)](http://www.udacity.com/drive)
-
 Overview
 ---
 This repository contains starting files for the Behavioral Cloning Project.
@@ -21,14 +19,6 @@ To meet specifications, the project will require submitting five files:
 
 This README file describes how to output the video in the "Details About Files In This Directory" section.
 
-Creating a Great Writeup
----
-A great writeup should include the [rubric points](https://review.udacity.com/#!/rubrics/432/view) as well as your description of how you addressed each point.  You should include a detailed description of the code used (with line-number references and code snippets where necessary), and links to other supporting documents or external references.  You should include images in your writeup to demonstrate how your code works with examples.  
-
-All that said, please be concise!  We're not looking for you to write a book here, just a brief description of how you passed each rubric point, and references to the relevant code :). 
-
-You're not required to use markdown for your writeup.  If you use another method please just submit a pdf of your writeup.
-
 The Project
 ---
 The goals / steps of this project are the following:
@@ -43,6 +33,9 @@ This lab requires:
 * [CarND Term1 Starter Kit](https://github.com/udacity/CarND-Term1-Starter-Kit)
 
 The lab enviroment can be created with CarND Term1 Starter Kit. Click [here](https://github.com/udacity/CarND-Term1-Starter-Kit/blob/master/README.md) for the details.
+
+Or run this command for the bare essentials in pip or in any virtualenv and install others as needed.
+`pip install numpy matplotlib jupyter pandas scikit-learn seaborn flask-socketio opencv-python torch torchvision eventlet`
 
 The following resources can be found in this github repository:
 * drive.py
