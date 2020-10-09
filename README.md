@@ -1,4 +1,14 @@
 # Behaviorial Cloning Project
+## Learning goals
+* Writing neural network modules
+* Writing training and validation loops
+* Understanding deep net training intuitions
+* Visualisations with tensorboard
+* Understanding and navigating computational graph
+* Implimenting anything else you have time for and exploring.
+* Once all this done, feel free to switch to another task
+
+# Legacy readme below
 
 Overview
 ---
