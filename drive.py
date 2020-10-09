@@ -15,6 +15,7 @@ from model import NvidiaNet
 
 import torch
 import cv2
+from model import SdcSimDataset
 # from keras.models import load_model
 # import h5py
 # from keras import __version__ as keras_version
@@ -64,10 +65,10 @@ def telemetry(sid, data):
         imgString = data["image"]
         image = Image.open(BytesIO(base64.b64decode(imgString)))
         image = np.asarray(image)
-        image = image[70:135, :]
-        # image = cv2.resize(image, (32, 32))
-        image = image / 255.0 - 0.5
-        image = torch.from_numpy(image.transpose(2,1,0)).float().unsqueeze(0).cuda()
+        image = SdcSimDataset.preprocess(image)
+        image = torch.from_numpy(image.transpose(2,1,0)).float().unsqueeze(0)
+        if torch.cuda.is_available():
+            image = image.cuda()
         steering_angle = model(image).item()
 
         throttle = controller.update(float(speed))
@@ -127,7 +128,7 @@ if __name__ == '__main__':
     #           ', but the model was built using ', model_version)
 
     # model = load_model(args.model)
-    model = torch.load('model.pkl')
+    model = torch.load(args.model)
     model.eval()
 
     if args.image_folder != '':

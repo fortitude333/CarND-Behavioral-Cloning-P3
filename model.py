@@ -26,11 +26,12 @@ class SdcSimDataset(Dataset):
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         return image
 
-    def preprocess(self, image):
+    @staticmethod
+    def preprocess(image):
         image = image[70:135, :]
         # cv2.imshow("cropped", image)
         # cv2.waitKey(0)
-        # image = cv2.resize(image, (32, 32))
+        # image = cv2.resize(image, (200, 66))
         image = image / 255.0 - 0.5
         return image
 
@@ -43,7 +44,7 @@ class SdcSimDataset(Dataset):
 
         # CENTER
         image = self.get_image(line[0], self.root_path)
-        image = self.preprocess(image)
+        image = SdcSimDataset.preprocess(image)
         images.append(image.transpose(2,0,1))
         angles.append(angle)
 
@@ -53,30 +54,23 @@ class SdcSimDataset(Dataset):
 
         # LEFT
         image = self.get_image(line[1], self.root_path)
-        image = self.preprocess(image)
+        image = SdcSimDataset.preprocess(image)
         images.append(image.transpose(2,0,1))
         angles.append(angle + correction)
 
         # RIGHT
         image = self.get_image(line[2], self.root_path)
-        image = self.preprocess(image)
+        image = SdcSimDataset.preprocess(image)
         images.append(image.transpose(2,0,1))
         angles.append(angle - correction)
 
-        # X_train = torch.Tensor(np.stack(images))
-        # y_train = torch.Tensor(angles)
-        # breakpoint()
-        # sample = {'image': torch.from_numpy(np.stack(images)),
-        #         'angles': torch.from_numpy(np.stack(angles))}
-        sample = (images, angles)
-
-        return sample
+        return images, angles
 
 # TODO
 # create the network
-class NvidiaNet(nn.Module):
+class ConvNet(nn.Module):
     def __init__(self):
-        super(NvidiaNet, self).__init__()
+        super(ConvNet, self).__init__()
 
     def forward(self, x):
         pass
@@ -95,14 +89,14 @@ if __name__ == '__main__':
     # change path according to your system
     dataset = SdcSimDataset('/home/ridhwan/Downloads/beta_simulator_linux/recording_data/')
     dataloader = DataLoader(dataset, batch_size=32, shuffle=True, num_workers=4, collate_fn=collate_fn)
-    net = NvidiaNet()
+    net = ConvNet()
     if torch.cuda.is_available():
         net = net.cuda()
     # TODO
     # Create loss and optimizer
     criterion =
     optimizer =
-    for epoch in range(15):  # loop over the dataset multiple times
+    for epoch in range(5):  # loop over the dataset multiple times
         running_loss = 0.0
         for i, (images, angles) in enumerate(dataloader):
             if torch.cuda.is_available():
